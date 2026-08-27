@@ -1,0 +1,69 @@
+[project]
+name = "social-media-agent"
+version = "0.1.0"
+description = "Generate and approve social-media drafts through local CLI agents."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+dependencies = [
+    "firecrawl-py>=4.3.6",
+    "httpx>=0.28.1",
+    "pillow>=11.3.0",
+    "pydantic>=2.11.7",
+    "python-dotenv>=1.1.1",
+    "rich>=14.1.0",
+    "tenacity>=9.1.2",
+    "trafilatura>=2.0.0",
+    "typer>=0.16.1",
+    "youtube-transcript-api>=1.2.2",
+]
+
+[project.scripts]
+social-agent = "social_media_agent.cli:app"
+
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/social_media_agent"]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.17.1",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.2.1",
+    "respx>=0.22.0",
+    "ruff>=0.12.8",
+]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers"
+testpaths = ["tests"]
+markers = ["live: manually opted-in tests that invoke authenticated local services"]
+
+[tool.coverage.run]
+branch = true
+source = ["social_media_agent"]
+omit = ["src/social_media_agent/__main__.py"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["social_media_agent"]
+mypy_path = "src"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]

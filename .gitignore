@@ -1,0 +1,27 @@
+dist/
+
+.env
+.git.broken-worktree
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+credentials.json
+.venv/
+.coverage
+htmlcov/
+.pytest_cache/
+
+.ipynb_checkpoints
+
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+
+# Local pipeline runtime state and generated post assets
+output/*
+!output/.gitkeep
+
+# macOS
+.DS_Store
