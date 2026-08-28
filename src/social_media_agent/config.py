@@ -18,12 +18,18 @@ class Settings(BaseModel):
     brand_path: Path
     output_path: Path
     state_path: Path
+    candidates_path: Path = Path("content/candidates.md")
+    research_sources_path: Path = Path("content/research-sources.md")
     firecrawl_api_key: str | None = None
     github_token: str | None = None
     x_access_token: str | None = None
     linkedin_access_token: str | None = None
     linkedin_author_urn: str | None = None
     linkedin_version: str | None = None
+    x_client_id: str | None = None
+    x_redirect_uri: str | None = None
+    linkedin_client_id: str | None = None
+    linkedin_redirect_uri: str | None = None
 
     @classmethod
     def from_workspace(cls, workspace: Path) -> Settings:
@@ -43,12 +49,25 @@ class Settings(BaseModel):
             brand_path=brand_path,
             output_path=output_path,
             state_path=output_path / "state.json",
+            candidates_path=_resolve_from(
+                root, os.getenv("SOCIAL_AGENT_CANDIDATES", "content/candidates.md")
+            ),
+            research_sources_path=_resolve_from(
+                root,
+                os.getenv(
+                    "SOCIAL_AGENT_RESEARCH_SOURCES", "content/research-sources.md"
+                ),
+            ),
             firecrawl_api_key=os.getenv("FIRECRAWL_API_KEY"),
             github_token=os.getenv("GITHUB_TOKEN"),
             x_access_token=os.getenv("X_ACCESS_TOKEN"),
             linkedin_access_token=os.getenv("LINKEDIN_ACCESS_TOKEN"),
             linkedin_author_urn=os.getenv("LINKEDIN_AUTHOR_URN"),
             linkedin_version=os.getenv("LINKEDIN_API_VERSION"),
+            x_client_id=os.getenv("X_CLIENT_ID"),
+            x_redirect_uri=os.getenv("X_REDIRECT_URI"),
+            linkedin_client_id=os.getenv("LINKEDIN_CLIENT_ID"),
+            linkedin_redirect_uri=os.getenv("LINKEDIN_REDIRECT_URI"),
         )
 
 

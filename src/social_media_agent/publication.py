@@ -58,7 +58,7 @@ class PublicationAttempt:
 
 @dataclass(frozen=True)
 class PublicationResult:
-    """Ordered results; later platforms are absent after an X failure."""
+    """Ordered results for each independent platform publication attempt."""
 
     attempts: tuple[PublicationAttempt, ...]
 
@@ -80,7 +80,7 @@ class UnconfiguredPublisher:
 
 
 class DirectOAuthPublisher:
-    """Publish X first, then LinkedIn, using direct OAuth 2.0 user tokens."""
+    """Publish X and LinkedIn independently using direct OAuth 2.0 user tokens."""
 
     def __init__(
         self,
@@ -97,8 +97,6 @@ class DirectOAuthPublisher:
             raise ValueError("Publication requires exact PNG image bytes")
         async with httpx.AsyncClient(transport=self._transport, timeout=30.0) as client:
             x_attempt = await self._publish_x(client, request)
-            if x_attempt.state is not PublicationState.PUBLISHED:
-                return PublicationResult(attempts=(x_attempt,))
             linkedin_attempt = await self._publish_linkedin(client, request)
         return PublicationResult(attempts=(x_attempt, linkedin_attempt))
 

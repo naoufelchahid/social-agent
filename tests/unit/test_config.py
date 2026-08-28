@@ -16,6 +16,10 @@ def test_settings_use_workspace_relative_defaults(tmp_path: Path) -> None:
     assert settings.brand_path == tmp_path.resolve() / "content" / "brand.md"
     assert settings.output_path == tmp_path.resolve() / "output"
     assert settings.state_path == tmp_path.resolve() / "output" / "state.json"
+    assert settings.candidates_path == tmp_path.resolve() / "content" / "candidates.md"
+    assert settings.research_sources_path == (
+        tmp_path.resolve() / "content" / "research-sources.md"
+    )
 
 
 def test_environment_can_override_input_path(

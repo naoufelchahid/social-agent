@@ -76,3 +76,79 @@ LinkedIn personal-member URN, and a current LinkedIn API version through local
 secret configuration. X uploads and creates its post before LinkedIn starts its
 image upload. Any post request whose result is uncertain records `unknown` and
 is never retried automatically.
+
+## 2026-08-27 — D014: Scheduled research intake remains outside the publishing pipeline
+
+An opt-in local Codex research intake may run on a cron schedule to discover
+source candidates. It writes candidates to a separate local list, never to the
+runnable URL queue, and it cannot draft, approve, or publish. The local
+operator deliberately promotes a candidate before the existing human-approved
+draft workflow may use it. This narrowly reintroduces scheduled curation while
+preserving the approval and publication boundaries.
+
+## 2026-08-27 — D015: Research intake uses a bounded, operator-mediated portfolio
+
+The intake runs weekly and retains at most ten new source candidates per run
+and thirty candidates in total. Its fixed, vetted capability allowlist may
+research only public GitHub repositories, public Reddit discussions, and
+operator-approved professional publications. Candidates enter a separate local
+list; an explicit CLI promotion validates and deduplicates one candidate before
+appending it to `content/urls.md`. This keeps external material untrusted and
+the production queue operator-controlled.
+
+## 2026-08-27 — D016: Candidate records are auditable and time-bounded
+
+`content/candidates.md` is the human-readable local candidate register. Each
+record carries the canonical URL, provenance and dates, grounded evidence,
+proposed Eudaimonia angle, concrete French SME/ETI use case, intended audience,
+and a scored rationale. The score evaluates editorial-pillar fit, business
+relevance, evidence quality, novelty, recency, and safety/reputation risk;
+unsupported, promotional, off-topic, or non-translatable sources are rejected.
+The operator installs the documented Tuesday 07:00 Africa/Casablanca cron entry;
+the application never edits their crontab and uses a lock to prevent overlap.
+Unpromoted candidates expire after thirty days and remain as `expired` audit
+records rather than being deleted.
+
+## 2026-08-27 — D017: Intake has constrained roles and observable partial failure
+
+`content/research-sources.md` is the versioned allowlist of GitHub API search
+queries, public Reddit communities, and professional publication/RSS feeds;
+the GitHub Trending webpage is not scraped. A constrained collector retrieves
+public evidence, a research evaluator returns structured selection findings,
+and deterministic local code alone validates and writes the candidate register.
+On a source-family failure, the run continues only with valid findings and
+writes an intake run report identifying the skipped family and stable reason;
+it never writes malformed or partial candidate records.
+
+## 2026-08-28 — D018: Intake has no interactive authority or production evidence shortcut
+
+Discovery uses only public, non-interactive interfaces: GitHub API search,
+public Reddit retrieval, and allowed publication feeds or pages. An optional
+`GITHUB_TOKEN` only raises API limits; no browser, social, or publication
+credential is available to intake. Promotion appends only the normalized URL
+and operator-approved angle and audience, so the existing production pipeline
+performs fresh extraction. Initial selection is limited to AI-use-case
+prioritisation, workflow adoption, governance/risk, and contextualised AI;
+tool-release news, model leaderboards, funding news, and purely technical
+material require a clear executive-decision or business-workflow translation.
+
+## 2026-08-28 — D019: Initial portfolio and intake bounds are deliberately narrow
+
+The initial GitHub queries cover `llm`, `ai-agents`, `workflow-automation`, and
+`artificial-intelligence` with activity and adoption filters. Reddit research is
+limited to `r/ArtificialInteligence`, `r/MachineLearning`, `r/LocalLLaMA`, and
+`r/AI_Agents`; official CNIL, Bpifrance Le Lab, Hub France IA, OECD AI, and NIST
+AI feeds or pages supply professional publications. Each configured source
+discovers at most twenty URLs; retrieval lasts at most fifteen seconds and
+retains at most 100 KB of evidence per URL. A run never retries within itself
+and stops after fifteen minutes.
+
+## 2026-08-28 — D020: Practitioner publications replace institutional sources
+
+The professional-publication portfolio uses bounded public DEV.to article API
+queries and tag RSS feeds, plus exact operator-approved Hashnode RSS feeds.
+DEV.to is the launch discovery source; Hashnode GraphQL is excluded because it
+is not a public broad-discovery interface and intake holds no Hashnode
+credential. Community material remains untrusted discovery input, and factual,
+legal, security, performance, or product claims require independent primary
+evidence before promotion.

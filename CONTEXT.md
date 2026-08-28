@@ -34,3 +34,55 @@ _Avoid_: Text-only publication, attachment attempt
 The single person who runs the CLI and authorizes their own social-platform
 accounts through direct OAuth 2.0 developer APIs.
 _Avoid_: User, tenant
+
+**Research intake**:
+A local, opt-in process that discovers source candidates for the local operator;
+it neither drafts nor publishes social content.
+_Avoid_: Content automation, publishing agent
+
+**Source candidate**:
+An untrusted URL with its proposed editorial angle and audience, kept outside
+the runnable URL queue until the local operator deliberately promotes it.
+_Avoid_: Queue item, approved source
+
+**Candidate portfolio**:
+The bounded collection of source families eligible for research intake: public
+GitHub repositories, public Reddit discussions, and operator-approved
+professional publications.
+_Avoid_: Open-web crawl, arbitrary sources
+
+**Candidate promotion**:
+The local operator's explicit, validated transfer of one source candidate into
+the runnable URL queue.
+_Avoid_: Automatic enqueueing, approval
+
+**Candidate record**:
+The auditable local entry for one source candidate: its provenance, grounded
+evidence, proposed Eudaimonia angle, professional use case, audience, score,
+and lifecycle status.
+_Avoid_: Draft post, queue entry
+
+**Candidate expiry**:
+The transition of an unpromoted source candidate to an `expired` status after
+thirty days; the record is retained for audit and cannot be promoted.
+_Avoid_: Deletion, silent cleanup
+
+**Research source configuration**:
+The versioned, operator-maintained allowlist of GitHub queries, subreddits, and
+professional publications that the research intake may consult.
+_Avoid_: Open-web search, implicit sources
+
+**Intake run report**:
+The local audit record of one research-intake run, including source families
+consulted, retained candidates, and safely skipped failures.
+_Avoid_: Publication receipt, runtime log
+
+**Professional-use-case translation**:
+The proposed, evidence-grounded explanation of how a source relates to a
+concrete executive decision or business workflow for a French SME or ETI.
+_Avoid_: Technical summary, draft copy
+
+**Research intake bounds**:
+The fixed time, retrieval, and evidence-size limits that make one intake run
+finite and prevent a source from monopolising local resources.
+_Avoid_: Best-effort crawl, unlimited research

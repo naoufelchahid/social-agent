@@ -57,7 +57,6 @@ def test_root_contains_only_the_retained_local_python_surface() -> None:
         "CONTEXT.md",
         "LICENSE",
         "README.md",
-        "arcade_social_publisher",
         "content",
         "docs",
         "output",

@@ -8,11 +8,24 @@ from typing import Annotated, Any
 
 import typer
 
+from social_media_agent.commands import CommandRunner
 from social_media_agent.config import Settings
 from social_media_agent.errors import PipelineStateError, SocialAgentError
 from social_media_agent.logging import configure_logging
 from social_media_agent.models import JobStage
+from social_media_agent.oauth import (
+    ConnectPlatform,
+    OAuthSettings,
+    connect,
+    format_exports,
+)
 from social_media_agent.pipeline import PipelineRunResult, build_local_coordinator
+from social_media_agent.research_intake import (
+    CodexResearchEvaluator,
+    ResearchIntakeService,
+    promote_candidate,
+    write_run_report,
+)
 from social_media_agent.review import ReviewAction
 from social_media_agent.signals import InterruptionController
 from social_media_agent.state import (
@@ -163,6 +176,95 @@ def review_command(
         coordinator.interruption = stop
         result = _run_async(coordinator.run(only_post_id=post_id))
     _print_result(result)
+
+
+@app.command("promote-candidate")
+def promote_candidate_command(
+    ctx: typer.Context,
+    candidate_id: Annotated[str, typer.Argument(help="Active source candidate ID.")],
+) -> None:
+    """Validate and explicitly add one research candidate to the URL queue."""
+    settings: Settings = ctx.obj
+    promoted = promote_candidate(
+        candidate_id=candidate_id,
+        candidates_path=settings.candidates_path,
+        queue_path=settings.input_path,
+    )
+    typer.echo(
+        f"Promoted candidate: {promoted.candidate_id} ({promoted.normalized_url()})"
+    )
+
+
+@app.command("research-intake")
+def research_intake_command(ctx: typer.Context) -> None:
+    """Discover bounded source candidates without drafting or publishing content."""
+    settings: Settings = ctx.obj
+    evaluator = CodexResearchEvaluator(
+        workspace=settings.workspace,
+        sources_path=settings.research_sources_path,
+        brand_path=settings.brand_path,
+        runner=CommandRunner(workspace=settings.workspace),
+        schema_path=settings.output_path / "research-intake" / "schema-v1.json",
+    )
+    service = ResearchIntakeService(
+        candidates_path=settings.candidates_path,
+        evaluator=evaluator,
+    )
+    try:
+        with RunLock(settings.output_path / ".research-intake.lock"):
+            result = asyncio.run(service.run())
+            write_run_report(
+                settings.output_path / "research-intake" / "latest-report.md", result
+            )
+    except SocialAgentError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(
+        "Research intake complete: "
+        f"added={len(result.added_candidate_ids)}, "
+        f"expired={len(result.expired_candidate_ids)}"
+    )
+
+
+@app.command("connect")
+def connect_command(
+    ctx: typer.Context,
+    platform: Annotated[
+        str,
+        typer.Option(help="OAuth provider to authorize: x, linkedin, or all."),
+    ] = "all",
+    timeout_seconds: Annotated[
+        float,
+        typer.Option("--timeout-seconds", min=1.0, help="Loopback callback timeout."),
+    ] = 300.0,
+) -> None:
+    """Authorize the local operator and print session-only environment exports."""
+    selected_platform = _connect_platform(platform)
+    settings: Settings = ctx.obj
+    try:
+        results = connect(
+            selected_platform,
+            OAuthSettings(
+                x_client_id=settings.x_client_id,
+                x_redirect_uri=settings.x_redirect_uri,
+                linkedin_client_id=settings.linkedin_client_id,
+                linkedin_redirect_uri=settings.linkedin_redirect_uri,
+                linkedin_version=settings.linkedin_version,
+            ),
+            timeout_seconds=timeout_seconds,
+        )
+    except SocialAgentError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(format_exports(results))
+
+
+def _connect_platform(value: str) -> ConnectPlatform:
+    match value:
+        case "x" | "linkedin" | "all":
+            return value
+        case _:
+            raise typer.BadParameter("Platform must be x, linkedin, or all")
 
 
 def _run_async(

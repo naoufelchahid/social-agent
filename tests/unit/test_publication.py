@@ -105,7 +105,7 @@ async def test_publisher_posts_exact_png_to_x_before_linkedin() -> None:
 
 
 @pytest.mark.asyncio
-async def test_uncertain_x_post_does_not_start_linkedin_or_retry() -> None:
+async def test_x_failure_does_not_prevent_independent_linkedin_publication() -> None:
     calls: list[httpx.Request] = []
 
     async def handler(request: httpx.Request) -> httpx.Response:
@@ -114,7 +114,24 @@ async def test_uncertain_x_post_does_not_start_linkedin_or_retry() -> None:
             return httpx.Response(200, json={"data": {"id": "x-media"}})
         if request.url == "https://api.x.com/2/tweets":
             return httpx.Response(503)
-        raise AssertionError("LinkedIn must not start after an uncertain X post")
+        if (
+            request.url
+            == "https://api.linkedin.com/rest/images?action=initializeUpload"
+        ):
+            return httpx.Response(
+                200,
+                json={
+                    "value": {
+                        "image": "urn:li:image:asset",
+                        "uploadUrl": "https://upload.linkedin.example/image",
+                    }
+                },
+            )
+        if request.url == "https://upload.linkedin.example/image":
+            return httpx.Response(201)
+        if request.url == "https://api.linkedin.com/rest/posts":
+            return httpx.Response(201, headers={"x-restli-id": "urn:li:share:post"})
+        raise AssertionError(f"Unexpected request: {request.method} {request.url}")
 
     publisher = DirectOAuthPublisher(
         PublisherSettings(
@@ -135,5 +152,11 @@ async def test_uncertain_x_post_does_not_start_linkedin_or_retry() -> None:
         )
     )
 
-    assert result.attempts[0].state == "unknown"
-    assert [request.url.host for request in calls] == ["api.x.com", "api.x.com"]
+    assert [attempt.state for attempt in result.attempts] == ["unknown", "published"]
+    assert [request.url.host for request in calls] == [
+        "api.x.com",
+        "api.x.com",
+        "api.linkedin.com",
+        "upload.linkedin.example",
+        "api.linkedin.com",
+    ]

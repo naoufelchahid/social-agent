@@ -38,6 +38,26 @@ Firecrawl is optional. When `FIRECRAWL_API_KEY` is absent or extraction fails, t
 
 Direct publication requires OAuth 2.0 user access tokens and a personal LinkedIn member URN. Export `X_ACCESS_TOKEN`, `LINKEDIN_ACCESS_TOKEN`, `LINKEDIN_AUTHOR_URN`, and the current `LINKEDIN_API_VERSION` before accepting a draft. These values are used only in memory and are never written to post artifacts. If they are absent, acceptance remains immutable and records a known no-write publication failure.
 
+### Connect personal accounts
+
+Register one native OAuth application with X and one with LinkedIn. Configure each
+application with the exact loopback redirect URL in `.env.example` (or another
+exact `http://127.0.0.1:<port>/...` URI), and enable X `tweet.read`,
+`tweet.write`, `users.read`, and `media.write` plus LinkedIn `openid`, `profile`,
+and `w_member_social`. Ask LinkedIn to enable native PKCE OAuth for its
+application. Set the two client IDs, redirect URIs, and the current LinkedIn API
+version as environment variables, then run:
+
+```bash
+uv run social-agent connect
+```
+
+The command starts a loopback callback server, opens each provider's consent
+page, exchanges the one-time codes using PKCE, derives the LinkedIn personal
+member URN, and prints `export` commands for the current shell. It does not
+write client credentials or tokens to the workspace. If you only need one
+platform, use `--platform x` or `--platform linkedin`.
+
 Copy the supported settings if you need overrides:
 
 ```bash
