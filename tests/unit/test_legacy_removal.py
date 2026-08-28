@@ -40,7 +40,7 @@ def test_dependabot_tracks_only_retained_package_ecosystems() -> None:
 
     assert 'package-ecosystem: "uv"' in configuration
     assert 'package-ecosystem: "github-actions"' in configuration
-    assert 'package-ecosystem: "npm"' not in configuration
+    assert 'package-ecosystem: "npm"' in configuration
     assert 'package-ecosystem: "pip"' not in configuration
     assert "memory-v2" not in configuration
 
@@ -65,6 +65,7 @@ def test_root_contains_only_the_retained_local_python_surface() -> None:
         "src",
         "tests",
         "uv.lock",
+        "web",
     }
     result = subprocess.run(
         ["git", "ls-files", "-z"],

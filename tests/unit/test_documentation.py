@@ -83,7 +83,6 @@ def test_legacy_setup_documents_and_config_are_removed() -> None:
     for required in (".venv/", ".pytest_cache/", "output/*"):
         assert required in gitignore
     for obsolete in (
-        "node_modules",
         ".yarn",
         ".turbo",
         ".eslintcache",

@@ -93,3 +93,34 @@ def test_regeneration_requires_non_empty_feedback(tmp_path: Path) -> None:
                 "review_action": "regenerate_text",
             }
         )
+
+
+def test_delete_command_removes_only_an_active_candidate_and_records_no_source(
+    tmp_path: Path,
+) -> None:
+    """Deletion is a closed workspace command with a deliberately small audit event."""
+    settings = Settings.from_workspace(tmp_path)
+    ResearchCandidateStore(settings.candidates_path).save([_candidate()])
+
+    result = OperatorWorkspace(settings).submit(
+        {"action": "delete_candidate", "candidate_id": "candidate-001"}
+    )
+
+    assert result == {"ok": True, "message": "Deleted candidate candidate-001"}
+    assert ResearchCandidateStore(settings.candidates_path).load() == []
+    event = (settings.output_path / "candidate-events.jsonl").read_text()
+    assert "candidate-001" in event
+    assert "https://example.com/article" not in event
+
+
+def test_delete_command_rejects_promoted_candidate(tmp_path: Path) -> None:
+    """Candidates retained after promotion cannot be removed from the audit register."""
+    settings = Settings.from_workspace(tmp_path)
+    candidate = _candidate().model_copy(update={"status": CandidateStatus.PROMOTED})
+    ResearchCandidateStore(settings.candidates_path).save([candidate])
+
+    result = OperatorWorkspace(settings).submit(
+        {"action": "delete_candidate", "candidate_id": "candidate-001"}
+    )
+
+    assert result == {"ok": False, "message": "Only active candidates can be deleted"}

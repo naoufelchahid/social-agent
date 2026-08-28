@@ -28,6 +28,7 @@ from social_media_agent.research_intake import (
     CodexResearchEvaluator,
     ResearchCandidateStore,
     ResearchIntakeService,
+    delete_candidate,
     promote_candidate,
     write_run_report,
 )
@@ -52,6 +53,7 @@ class WorkspaceCommand(BaseModel):
         "resume",
         "retry_failed",
         "promote_candidate",
+        "delete_candidate",
         "research_intake",
         "review",
         "connect",
@@ -65,8 +67,11 @@ class WorkspaceCommand(BaseModel):
 
     @model_validator(mode="after")
     def validate_action_fields(self) -> WorkspaceCommand:
-        if self.action == "promote_candidate" and not self.candidate_id:
-            raise ValueError("Candidate promotion requires a candidate ID")
+        if (
+            self.action in {"promote_candidate", "delete_candidate"}
+            and not self.candidate_id
+        ):
+            raise ValueError("Candidate command requires a candidate ID")
         if self.action == "review":
             if not self.post_id or self.review_action is None:
                 raise ValueError("Review requires a post ID and review action")
@@ -242,6 +247,17 @@ class OperatorWorkspace:
                 queue_path=self._settings.input_path,
             )
             return {"ok": True, "message": f"Promoted {promoted.candidate_id}"}
+        if command.action == "delete_candidate":
+            assert command.candidate_id is not None
+            delete_candidate(
+                candidate_id=command.candidate_id,
+                candidates_path=self._settings.candidates_path,
+                events_path=self._settings.output_path / "candidate-events.jsonl",
+            )
+            return {
+                "ok": True,
+                "message": f"Deleted candidate {command.candidate_id}",
+            }
         if command.action == "research_intake":
             return self._research_intake()
         if command.action == "review":

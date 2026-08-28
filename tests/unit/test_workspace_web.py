@@ -1,6 +1,7 @@
 """Tests for the loopback-only workspace transport."""
 
 import http.client
+import re
 from pathlib import Path
 from threading import Thread
 
@@ -45,15 +46,44 @@ def test_page_loads_same_origin_script_under_a_restrictive_csp(tmp_path: Path) -
         connection.request("GET", "/")
         page = connection.getresponse()
 
-        assert b'<script src="/workspace.js"></script>' in page.read()
-        assert page.getheader("Content-Security-Policy") == "default-src 'self'"
+        contents = page.read()
+        assert b'<script type="module" crossorigin src="/assets/' in contents
+        assert (
+            page.getheader("Content-Security-Policy")
+            == "default-src 'self'; script-src 'self'"
+        )
 
-        connection.request("GET", "/workspace.js")
+        asset = re.search(
+            rb'<script type="module" crossorigin src="/([^\"]+)"></script>',
+            contents,
+        )
+        assert asset is not None
+        connection.request("GET", f"/{asset.group(1).decode()}")
         script = connection.getresponse()
         assert script.status == 200
         assert (
             script.getheader("Content-Type") == "application/javascript; charset=utf-8"
         )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_v1_transport_rejects_unknown_static_assets(tmp_path: Path) -> None:
+    """Only frontend manifest assets are served; filenames never become file paths."""
+    server = build_workspace_server(
+        OperatorWorkspace(Settings.from_workspace(tmp_path))
+    )
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        connection = http.client.HTTPConnection("127.0.0.1", server.server_port)
+        connection.request("GET", "/assets/../../pyproject.toml")
+        assert connection.getresponse().status == 404
+
+        connection.request("GET", "/api/v1/snapshot")
+        assert connection.getresponse().status == 200
     finally:
         server.shutdown()
         server.server_close()

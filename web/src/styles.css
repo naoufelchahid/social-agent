@@ -1,0 +1,17 @@
+:root { color: #172033; background: #eff3f8; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.shell { display: grid; grid-template-columns: 15rem 1fr; min-height: 100vh; }
+aside { padding: 2rem 1rem; background: #111a2e; color: #edf3ff; }
+aside h1 { font-size: 1.15rem; }
+nav { display: grid; gap: .35rem; }
+button { cursor: pointer; border: 1px solid #9aa7bd; border-radius: .4rem; padding: .55rem .75rem; background: white; color: #172033; font: inherit; }
+nav button { text-align: left; background: transparent; color: inherit; border: 0; }
+nav button.selected, nav button:hover { background: #273858; }
+button:focus-visible, a:focus-visible { outline: 3px solid #e8b54b; outline-offset: 2px; }
+main { max-width: 72rem; width: 100%; padding: 2rem; }
+header { display: flex; justify-content: space-between; gap: 1rem; }
+.command { background: #dbeafe; padding: .5rem; border-radius: .4rem; }
+article { background: white; border: 1px solid #d8e0eb; border-radius: .6rem; padding: 1rem; margin: 1rem 0; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; background: white; padding: 1rem; }
+@media (max-width: 700px) { .shell { grid-template-columns: 1fr; } aside { padding: 1rem; } nav { grid-template-columns: repeat(5, 1fr); } main { padding: 1rem; } }

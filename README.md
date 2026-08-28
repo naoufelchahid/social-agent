@@ -23,6 +23,12 @@ to the existing workflow; it cannot edit queue, state, artifacts, manifests, or
 publication records directly. It has no public URL, accounts, roles, scheduling,
 analytics, remote administration, or organization publishing controls.
 
+The packaged React console has five pages: Candidates, Intake, Pipeline, Review,
+and Outcomes. Its static assets ship with the Python package, so operators do
+not need to run a frontend development server. Active source candidates may be
+permanently deleted only after the console's two confirmations; promoted and
+expired candidates remain retained for audit.
+
 ## Requirements
 
 - Python 3.11 or newer
@@ -201,6 +207,7 @@ uv run ruff format --check src tests
 uv run ruff check src tests
 uv run mypy
 uv run pytest -m "not live" --cov=social_media_agent --cov-report=term-missing
+cd web && npm ci && npm run build
 ```
 
 The mocked end-to-end test uses fake Firecrawl evidence and fake Agy/Codex executables while still creating and validating a real PNG:

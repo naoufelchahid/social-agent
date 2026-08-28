@@ -1,13 +1,17 @@
-"""Loopback HTTP presentation for the local operator workspace."""
+"""Loopback HTTP presentation for the packaged local operator workspace."""
 
 from __future__ import annotations
 
 import json
+import mimetypes
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from social_media_agent.operator_workspace import OperatorWorkspace
+
+_ASSETS = Path(__file__).with_name("web_assets")
 
 
 def build_workspace_server(
@@ -22,16 +26,9 @@ def _handler_for(workspace: OperatorWorkspace) -> type[BaseHTTPRequestHandler]:
         def do_GET(self) -> None:
             parsed = urlparse(self.path)
             if parsed.path == "/":
-                self._bytes(HTTPStatus.OK, _PAGE.encode(), "text/html; charset=utf-8")
+                self._asset("index.html", "text/html; charset=utf-8")
                 return
-            if parsed.path == "/workspace.js":
-                self._bytes(
-                    HTTPStatus.OK,
-                    _SCRIPT.encode(),
-                    "application/javascript; charset=utf-8",
-                )
-                return
-            if parsed.path == "/api/snapshot":
+            if parsed.path in {"/api/snapshot", "/api/v1/snapshot"}:
                 self._snapshot(parsed.query)
                 return
             parts = parsed.path.split("/")
@@ -39,13 +36,20 @@ def _handler_for(workspace: OperatorWorkspace) -> type[BaseHTTPRequestHandler]:
                 len(parts) == 5
                 and parts[:3] == ["", "api", "posts"]
                 and parts[4] == "image"
+            ) or (
+                len(parts) == 6
+                and parts[:4] == ["", "api", "v1", "posts"]
+                and parts[5] == "image"
             ):
-                self._image(parts[3])
+                self._image(parts[-2])
+                return
+            if parsed.path.startswith("/assets/"):
+                self._asset(parsed.path.removeprefix("/"), None)
                 return
             self._json(HTTPStatus.NOT_FOUND, {"ok": False, "message": "Not found"})
 
         def do_POST(self) -> None:
-            if urlparse(self.path).path != "/api/commands":
+            if urlparse(self.path).path not in {"/api/commands", "/api/v1/commands"}:
                 self._json(HTTPStatus.NOT_FOUND, {"ok": False, "message": "Not found"})
                 return
             try:
@@ -84,6 +88,23 @@ def _handler_for(workspace: OperatorWorkspace) -> type[BaseHTTPRequestHandler]:
                     {"ok": False, "message": "Image unavailable"},
                 )
 
+        def _asset(self, name: str, content_type: str | None) -> None:
+            if name not in _manifest_assets():
+                self._json(HTTPStatus.NOT_FOUND, {"ok": False, "message": "Not found"})
+                return
+            path = _ASSETS / name
+            if not path.is_file():
+                self._json(HTTPStatus.NOT_FOUND, {"ok": False, "message": "Not found"})
+                return
+            resolved_type = content_type or mimetypes.guess_type(path.name)[0]
+            if path.suffix == ".js":
+                resolved_type = "application/javascript; charset=utf-8"
+            self._bytes(
+                HTTPStatus.OK,
+                path.read_bytes(),
+                resolved_type or "application/octet-stream",
+            )
+
         def _json(self, status: HTTPStatus, value: object) -> None:
             self._bytes(
                 status,
@@ -99,7 +120,9 @@ def _handler_for(workspace: OperatorWorkspace) -> type[BaseHTTPRequestHandler]:
             self.send_header("Content-Length", str(len(contents)))
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
-            self.send_header("Content-Security-Policy", "default-src 'self'")
+            self.send_header(
+                "Content-Security-Policy", "default-src 'self'; script-src 'self'"
+            )
             self.end_headers()
             self.wfile.write(contents)
 
@@ -109,50 +132,22 @@ def _handler_for(workspace: OperatorWorkspace) -> type[BaseHTTPRequestHandler]:
     return WorkspaceHandler
 
 
-_PAGE = """<!doctype html>
-<html lang="en">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Social Agent · Local workspace</title>
-<body>
-<main>
-  <h1>Local operator workspace</h1>
-  <p id="notice" aria-live="polite"></p>
-  <section><h2>Pipeline</h2><p id="pipeline"></p><div id="posts"></div></section>
-  <section><h2>Candidate portfolio</h2><div id="candidates"></div></section>
-  <section><h2>Research intake</h2><pre id="report"></pre></section>
-</main>
-<script src="/workspace.js"></script>
-</body>
-</html>"""
-
-
-_SCRIPT = """const text = (value) => String(value ?? "");
-
-function postCard(post) {
-  return `<article><h3>${text(post.post_id)} — ${text(post.stage)}</h3>`
-    + `<p>${text(post.url)}</p><p>${text(post.last_error)}</p></article>`;
-}
-
-function candidateCard(candidate) {
-  return `<article><h3>${text(candidate.title)}</h3>`
-    + `<p>${text(candidate.status)} · ${text(candidate.score)}/10</p>`
-    + `<p>${text(candidate.angle)}</p></article>`;
-}
-
-async function loadWorkspace() {
-  const response = await fetch("/api/snapshot");
-  const snapshot = await response.json();
-  document.querySelector("#pipeline").textContent = snapshot.active_post_id
-    ? `Active: ${snapshot.active_post_id}`
-    : "No active post";
-  document.querySelector("#posts").innerHTML = snapshot.posts.map(postCard).join("");
-  document.querySelector("#candidates").innerHTML = snapshot.candidates
-    .map(candidateCard)
-    .join("");
-  document.querySelector("#report").textContent = snapshot.research.latest_report
-    || "No intake report.";
-}
-
-loadWorkspace();
-"""
+def _manifest_assets() -> set[str]:
+    """Return only paths Vite declared for the packaged application."""
+    try:
+        manifest = json.loads((_ASSETS / "asset-manifest.json").read_text())
+    except (OSError, json.JSONDecodeError):
+        return set()
+    if not isinstance(manifest, dict):
+        return set()
+    assets = {"index.html"}
+    for value in manifest.values():
+        if not isinstance(value, dict):
+            continue
+        for field in ("file", "css", "assets", "imports"):
+            item = value.get(field)
+            if isinstance(item, str):
+                assets.add(item)
+            elif isinstance(item, list):
+                assets.update(part for part in item if isinstance(part, str))
+    return assets

@@ -111,7 +111,8 @@ information from terminal commands:
 uv run social-agent workspace
 ```
 
-It binds only to `http://127.0.0.1:8767/`. The workspace shows pipeline state,
+It binds only to `http://127.0.0.1:8767/`. The packaged TypeScript console has
+Candidates, Intake, Pipeline, Review, and Outcomes pages; it shows pipeline state,
 candidate portfolio, research reports, review packages and publication outcomes;
 it submits the same explicit local workflow operations as the CLI. It never
 shows OAuth tokens or secrets. Before browser acceptance, it states exactly that

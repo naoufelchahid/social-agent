@@ -307,6 +307,39 @@ def promote_candidate(
     return promoted
 
 
+def delete_candidate(
+    *, candidate_id: str, candidates_path: Path, events_path: Path
+) -> None:
+    """Irreversibly remove one active candidate and retain a content-free event."""
+    store = ResearchCandidateStore(candidates_path)
+    candidates = store.load()
+    selected = next(
+        (
+            candidate
+            for candidate in candidates
+            if candidate.candidate_id == candidate_id
+        ),
+        None,
+    )
+    if selected is None:
+        raise ResearchIntakeError(f"Candidate not found: {candidate_id}")
+    if selected.status is not CandidateStatus.ACTIVE:
+        raise ResearchIntakeError("Only active candidates can be deleted")
+    store.save([candidate for candidate in candidates if candidate != selected])
+    events_path.parent.mkdir(parents=True, exist_ok=True)
+    with events_path.open("a", encoding="utf-8") as events:
+        events.write(
+            json.dumps(
+                {
+                    "event": "candidate_deleted",
+                    "candidate_id": candidate_id,
+                    "occurred_at": datetime.now(UTC).isoformat(),
+                }
+            )
+            + "\n"
+        )
+
+
 def _replace_candidate(
     candidates: list[ResearchCandidate], replacement: ResearchCandidate
 ) -> None:

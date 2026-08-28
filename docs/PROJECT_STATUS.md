@@ -417,6 +417,16 @@ Last updated: 2026-08-26
 
 ## Blockers and risks
 
+### 2026-08-28 — Packaged local operator console
+
+- Replaced the temporary inline browser page with a Vite-built React and TypeScript
+  console packaged inside the Python wheel. `social-agent workspace` remains a
+  loopback-only Python command and serves only build-manifest-declared assets.
+- Added stable `/api/v1/` snapshot and command aliases, strict CSP, active-candidate
+  deletion with a source-content-free local event, and the five local console pages.
+- Verification: focused workspace tests, Python Ruff and strict mypy, frontend
+  typecheck and production build, and the full offline Python suite were run.
+
 - The installed Agy CLI now exposes `--json-schema`, but Phase 3 intentionally retains independent Pydantic validation and the approved one-repair contract; adopting CLI-side schema enforcement later should preserve that fail-closed boundary.
 - Built-in `$imagegen` output begins under Codex-managed storage; the invoked Codex session must copy the accepted asset into the post directory, and Python must verify it.
 - Firecrawl and live agent behavior are external; default tests must remain deterministic and offline.
