@@ -76,6 +76,7 @@ def test_phase_7_exposes_complete_local_command_surface() -> None:
         "connect",
         "research-intake",
         "promote-candidate",
+        "workspace",
     ):
         assert command in result.stdout
 

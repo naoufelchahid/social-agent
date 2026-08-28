@@ -1,6 +1,7 @@
 """Local command-line interface."""
 
 import asyncio
+import webbrowser
 from collections import Counter
 from collections.abc import Coroutine
 from pathlib import Path
@@ -19,6 +20,7 @@ from social_media_agent.oauth import (
     connect,
     format_exports,
 )
+from social_media_agent.operator_workspace import OperatorWorkspace
 from social_media_agent.pipeline import PipelineRunResult, build_local_coordinator
 from social_media_agent.research_intake import (
     CodexResearchEvaluator,
@@ -34,6 +36,7 @@ from social_media_agent.state import (
     next_resumable_job,
     restore_job,
 )
+from social_media_agent.workspace_web import build_workspace_server
 
 app = typer.Typer(
     help="Generate and approve social-media drafts locally.",
@@ -257,6 +260,32 @@ def connect_command(
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(code=1) from exc
     typer.echo(format_exports(results))
+
+
+@app.command("workspace")
+def workspace_command(
+    ctx: typer.Context,
+    port: Annotated[
+        int,
+        typer.Option("--port", min=1, max=65535, help="Loopback-only workspace port."),
+    ] = 8767,
+    open_browser: Annotated[
+        bool,
+        typer.Option("--open/--no-open", help="Open the local workspace in a browser."),
+    ] = True,
+) -> None:
+    """Open the local-only visual operator workspace on 127.0.0.1."""
+    settings: Settings = ctx.obj
+    server = build_workspace_server(OperatorWorkspace(settings), port)
+    address = f"http://127.0.0.1:{server.server_port}/"
+    typer.echo(f"Local operator workspace: {address}")
+    if open_browser:
+        webbrowser.open(address)
+    with server:
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            typer.echo("Workspace stopped")
 
 
 def _connect_platform(value: str) -> ConnectPlatform:

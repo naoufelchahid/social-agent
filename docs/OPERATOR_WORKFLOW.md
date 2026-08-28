@@ -104,6 +104,20 @@ shared validated PNG image.
 
 ## 4. Run, inspect, and approve
 
+You may use the local browser workspace instead of assembling status and review
+information from terminal commands:
+
+```bash
+uv run social-agent workspace
+```
+
+It binds only to `http://127.0.0.1:8767/`. The workspace shows pipeline state,
+candidate portfolio, research reports, review packages and publication outcomes;
+it submits the same explicit local workflow operations as the CLI. It never
+shows OAuth tokens or secrets. Before browser acceptance, it states exactly that
+the action creates an immutable approved draft and immediately starts X then
+LinkedIn publication to the operator's personal accounts.
+
 Start the sequential local workflow:
 
 ```bash

@@ -9,6 +9,20 @@ uv run social-agent run
 
 Each accepted URL produces one concept, platform-specific copy, and one validated image under `output/posts/<post-id>/`. Acceptance creates an immutable approved draft, then publishes its approved image and platform-specific copy to the local operator's personal X and LinkedIn accounts through their direct OAuth 2.0 developer APIs. It does not schedule posts.
 
+## Local operator workspace
+
+The CLI remains supported. For a local visual view of the same workflow, run:
+
+```bash
+uv run social-agent workspace
+```
+
+It opens `http://127.0.0.1:8767/` by default and is deliberately bound to the
+local machine. The workspace reads persisted state and submits explicit commands
+to the existing workflow; it cannot edit queue, state, artifacts, manifests, or
+publication records directly. It has no public URL, accounts, roles, scheduling,
+analytics, remote administration, or organization publishing controls.
+
 ## Requirements
 
 - Python 3.11 or newer

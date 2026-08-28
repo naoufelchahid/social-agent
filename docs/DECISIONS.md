@@ -152,3 +152,16 @@ is not a public broad-discovery interface and intake holds no Hashnode
 credential. Community material remains untrusted discovery input, and factual,
 legal, security, performance, or product claims require independent primary
 evidence before promotion.
+
+## 2026-08-28 — D021: Local web workspace is an additive presentation seam
+
+The local operator workspace is served only on loopback and presents a
+serializable snapshot plus a closed set of explicit operator commands. Its
+single application module resolves persisted state, artifacts, locks,
+validation, and error translation; browser handlers never implement workflow
+transitions or write queue, state, candidate, manifest, or publication files.
+The CLI remains a supported interface. Acceptance retains the existing immutable
+approval boundary and immediately attempts image-complete X publication before
+LinkedIn publication. No public deployment, remote administration, sessions,
+roles, scheduling controls, analytics, organization publishing, or remote
+editing/deletion is introduced.

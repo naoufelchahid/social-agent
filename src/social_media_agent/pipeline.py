@@ -396,6 +396,29 @@ class LocalPipelineWorkflow:
             )
         raise PipelineStateError(f"Unsupported executable stage: {stage}")
 
+    async def apply_review_action(
+        self,
+        *,
+        post_id: str,
+        action: ReviewAction,
+        feedback: str | None = None,
+        replacement_path: Path | None = None,
+    ) -> ReviewOutcome:
+        """Apply one browser or CLI review action through the canonical service."""
+        item = next(
+            (item for item in parse_queue(self.queue_path) if item.id == post_id), None
+        )
+        if item is None:
+            raise PipelineStateError("Post ID is not present in the queue")
+        context = self._review_context(item)
+        _, outcome = await self.review_service.apply(
+            context,
+            action,
+            feedback=feedback,
+            replacement_path=replacement_path,
+        )
+        return outcome
+
     def _review_context(self, item: QueueItem) -> HumanReviewContext:
         return HumanReviewContext(
             post_id=item.id,
@@ -440,6 +463,28 @@ def build_local_coordinator(
 ) -> PipelineCoordinator:
     """Construct the real local services used by CLI writer commands."""
     selected_queue = (queue_path or settings.input_path).resolve()
+    workflow = build_local_workflow(
+        settings,
+        queue_path=selected_queue,
+        interactive_review=interactive_review,
+        explicit_action=explicit_action,
+    )
+    return PipelineCoordinator(
+        state_store=StateStore(settings.state_path),
+        queue_path=selected_queue,
+        workflow=workflow,
+    )
+
+
+def build_local_workflow(
+    settings: Settings,
+    *,
+    queue_path: Path | None = None,
+    interactive_review: bool = True,
+    explicit_action: ReviewAction | None = None,
+) -> LocalPipelineWorkflow:
+    """Construct the canonical workflow for a local application adapter."""
+    selected_queue = (queue_path or settings.input_path).resolve()
     artifacts = ArtifactRepository(settings.workspace, settings.output_path)
     state_store = StateStore(settings.state_path)
     runner = CommandRunner(workspace=settings.workspace)
@@ -468,7 +513,7 @@ def build_local_coordinator(
         workspace=settings.workspace, artifacts=artifacts, runner=runner
     )
     publisher = _build_publisher(settings)
-    workflow = LocalPipelineWorkflow(
+    return LocalPipelineWorkflow(
         settings=settings,
         queue_path=selected_queue,
         state_store=state_store,
@@ -481,11 +526,6 @@ def build_local_coordinator(
         publisher=publisher,
         interactive_review=interactive_review,
         explicit_action=explicit_action,
-    )
-    return PipelineCoordinator(
-        state_store=state_store,
-        queue_path=selected_queue,
-        workflow=workflow,
     )
 
 
