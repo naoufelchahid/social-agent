@@ -5,11 +5,13 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import os
 import re
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from threading import Lock, Thread
 from typing import Any, Literal, cast
 
@@ -58,7 +60,6 @@ class WorkspaceCommand(BaseModel):
     candidate_id: str | None = None
     review_action: ReviewAction | None = None
     feedback: str | None = None
-    replacement_path: str | None = None
     replacement_image_base64: str | None = None
     platform: Literal["x", "linkedin", "all"] | None = None
 
@@ -79,7 +80,7 @@ class WorkspaceCommand(BaseModel):
             ):
                 raise ValueError("Regeneration requires non-empty feedback")
             if self.review_action is ReviewAction.REPLACE_IMAGE and not (
-                self.replacement_path or self.replacement_image_base64
+                self.replacement_image_base64
             ):
                 raise ValueError("Image replacement requires an explicit file")
         if self.action == "retry_failed" and self.post_id is not None:
@@ -103,7 +104,6 @@ class OperatorWorkspace:
         self._settings = settings
         self._lock = Lock()
         self._active: _ActiveCommand | None = None
-        self._last_command: _ActiveCommand | None = None
 
     def snapshot(self, *, candidate_status: str | None = None) -> dict[str, Any]:
         """Return a serializable, secret-free view of persisted local workflow facts."""
@@ -133,8 +133,7 @@ class OperatorWorkspace:
         resumable = next_resumable_job(state)
         with self._lock:
             active = self._active
-            last_command = self._last_command
-        command = active or last_command
+        command = active or self._persisted_command()
         return {
             "active_post_id": state.active_job_id,
             "counts": dict(Counter(job["stage"] for job in posts)),
@@ -208,6 +207,7 @@ class OperatorWorkspace:
             if self._active is not None:
                 raise ValueError("A local workspace command is already running")
             self._active = _ActiveCommand(command.action, "running")
+            self._write_command_status(self._active)
         Thread(target=self._run_background, args=(command,), daemon=True).start()
 
     def _run_background(self, command: WorkspaceCommand) -> None:
@@ -219,7 +219,7 @@ class OperatorWorkspace:
             state = _ActiveCommand(command.action, "failed", str(exc))
         with self._lock:
             self._active = None
-            self._last_command = state
+            self._write_command_status(state)
 
     def _perform(self, command: WorkspaceCommand) -> dict[str, object]:
         if command.action == "run":
@@ -246,9 +246,7 @@ class OperatorWorkspace:
             return self._research_intake()
         if command.action == "review":
             assert command.post_id is not None and command.review_action is not None
-            replacement = self._replacement_path(
-                command.replacement_path, command.replacement_image_base64
-            )
+            replacement = self._replacement_path(command.replacement_image_base64)
             workflow = build_local_workflow(self._settings)
             with RunLock(self._settings.output_path / ".run.lock"):
                 outcome = asyncio.run(
@@ -315,9 +313,7 @@ class OperatorWorkspace:
             )
         return {"ok": True, "message": "Research intake completed"}
 
-    def _replacement_path(
-        self, value: str | None, encoded_image: str | None
-    ) -> Path | None:
+    def _replacement_path(self, encoded_image: str | None) -> Path | None:
         if encoded_image is not None:
             try:
                 contents = base64.b64decode(encoded_image, validate=True)
@@ -329,14 +325,40 @@ class OperatorWorkspace:
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(contents)
             return destination
-        if value is None:
+        return None
+
+    def _persisted_command(self) -> _ActiveCommand | None:
+        value = _safe_json(self._settings.output_path / "workspace-command.json")
+        if not isinstance(value, dict):
             return None
-        candidate = Path(value).expanduser().resolve()
-        try:
-            candidate.relative_to(self._settings.workspace)
-        except ValueError as exc:
-            raise ValueError("Replacement image must be inside the workspace") from exc
-        return candidate
+        action = value.get("action")
+        status = value.get("status")
+        message = value.get("message")
+        if not isinstance(action, str) or not isinstance(status, str):
+            return None
+        return _ActiveCommand(
+            action, status, message if isinstance(message, str) else None
+        )
+
+    def _write_command_status(self, status: _ActiveCommand) -> None:
+        path = self._settings.output_path / "workspace-command.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=path.parent, delete=False
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+            temporary.write(
+                json.dumps(
+                    {
+                        "action": status.action,
+                        "status": status.status,
+                        "message": status.message,
+                    }
+                )
+            )
+            temporary.flush()
+            os.fsync(temporary.fileno())
+        temporary_path.replace(path)
 
     def _review_snapshot(self, post_id: str) -> dict[str, object] | None:
         directory = self._settings.output_path / "posts" / post_id
