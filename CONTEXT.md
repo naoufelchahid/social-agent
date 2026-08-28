@@ -35,6 +35,17 @@ The single person who runs the CLI and authorizes their own social-platform
 accounts through direct OAuth 2.0 developer APIs.
 _Avoid_: User, tenant
 
+**Local operator workspace**:
+A loopback-only TypeScript interface through which the local operator reads the
+persisted workflow and submits the same explicit commands available in the CLI.
+_Avoid_: Remote dashboard, administration portal
+
+**Review workspace**:
+The focused local operator view of one human-review package, containing the
+source provenance, platform-specific renderings, mandatory image, validation
+evidence, and explicit review actions.
+_Avoid_: Draft editor, publication scheduler
+
 **Research intake**:
 A local, opt-in process that discovers source candidates for the local operator;
 it neither drafts nor publishes social content.
@@ -66,6 +77,12 @@ _Avoid_: Draft post, queue entry
 The transition of an unpromoted source candidate to an `expired` status after
 thirty days; the record is retained for audit and cannot be promoted.
 _Avoid_: Deletion, silent cleanup
+
+**Candidate deletion**:
+The local operator's irreversible removal of one active source candidate from
+the candidate register after a two-step confirmation. Promoted candidates
+remain retained because they have entered the runnable workflow.
+_Avoid_: Queue deletion, post deletion, automatic cleanup
 
 **Research source configuration**:
 The versioned, operator-maintained allowlist of GitHub queries, subreddits, and
